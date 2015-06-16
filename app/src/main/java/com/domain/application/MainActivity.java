@@ -29,8 +29,6 @@ import java.io.FileInputStream;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.text.DateFormat;
-import java.util.Date;
 
 
 public class MainActivity extends ActionBarActivity implements LocationListener,
@@ -39,7 +37,7 @@ public class MainActivity extends ActionBarActivity implements LocationListener,
     public static final String INTENT_EDIT = "intent_edit";
 
     /**
-
+     * Path of the script on server which receives and saves XML files
      */
     private static final String SERVER_PATH = "https://php-lnmiit.rhcloud.com/UploadToServer.php";
 
@@ -53,7 +51,6 @@ public class MainActivity extends ActionBarActivity implements LocationListener,
     private static final long FASTEST_INTERVAL = 1000 * 5;
 
     private LocationRequest mLocationRequest;
-    private String mLastUpdateTime;
 
     private TextView mSend1;
     private TextView mSend2;
@@ -302,7 +299,6 @@ public class MainActivity extends ActionBarActivity implements LocationListener,
     @Override
     public void onConnected(Bundle bundle) {
         Log.i("MainActivity", "Connected to GoogleApiClient");
-        /*  mCurrentLocation = LocationServices.FusedLocationApi.getLastLocation(mGoogleApiClient);  */
         startLocationUpdates();
     }
 
@@ -338,7 +334,6 @@ public class MainActivity extends ActionBarActivity implements LocationListener,
     public void onLocationChanged(Location location) {
         Log.d("MainActivity", "On location changed called.");
         mCurrentLocation = location;
-        mLastUpdateTime = DateFormat.getTimeInstance().format(new Date());
     }
 
     protected void createLocationRequest() {
@@ -352,21 +347,6 @@ public class MainActivity extends ActionBarActivity implements LocationListener,
     protected void onPause() {
         super.onPause();
         stopLocationUpdates();
-    }
-
-    private void updateUI() {
-        Log.d("MainActivity", "UI update initiated .............");
-        if (null != mCurrentLocation) {
-            String lat = String.valueOf(mCurrentLocation.getLatitude());
-            String lng = String.valueOf(mCurrentLocation.getLongitude());
-            mMessage.setText("At Time: " + mLastUpdateTime + "\n" +
-                    "Latitude: " + lat + "\n" +
-                    "Longitude: " + lng + "\n" +
-                    "Accuracy: " + mCurrentLocation.getAccuracy() + "\n" +
-                    "Provider: " + mCurrentLocation.getProvider());
-        } else {
-            Log.d("MainActivity", "location is null ...............");
-        }
     }
 
     protected void stopLocationUpdates() {

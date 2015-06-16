@@ -123,12 +123,26 @@ public class Util {
         return getSharedPrefs(context).getString(KEY_ADDRESS, null);
     }
 
+    /**
+     * Returns the phone number saved in the SIM
+     *
+     * @param context Activity context from which function is called
+     * @return phone number as string if available, null otherwise
+     */
     public static String getPhoneNumberOfMobile(Context context) {
         TelephonyManager telephonyManager = (TelephonyManager) context.getSystemService(Context.TELEPHONY_SERVICE);
         String phoneNumber = telephonyManager.getLine1Number();
         return phoneNumber;
     }
 
+    /**
+     * Creates a XML file in Internal Storage of the phone
+     *
+     * @param context      Activity context from which function is called
+     * @param fileName     name of the file to be created
+     * @param sendLocation true if location (latitude and longitude) needs to be added in the file, false otherwise
+     * @param location     location object to send latitude and longitude. Only useful if sendLocation is true
+     */
     public static void createXMLFile(Context context, String fileName, Boolean sendLocation, Location location) {
 
         FileOutputStream outputStream = null;

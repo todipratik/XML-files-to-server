@@ -1,8 +1,11 @@
 package com.domain.application;
 
 import android.app.ProgressDialog;
+import android.content.Context;
 import android.content.Intent;
 import android.location.Location;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.os.Bundle;
 import android.support.v7.app.ActionBarActivity;
 import android.util.Log;
@@ -69,33 +72,10 @@ public class MainActivity extends ActionBarActivity implements
         mSend1.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                // create the XML file
-                // previous file, if exists, would be overwritten
-                Util.createXMLFile(getApplicationContext(), XML_FILE_1, false, null);
-
-                // display progress dialog
-                dialog = ProgressDialog.show(MainActivity.this, "Please wait", "Sending file...", true);
-                final String filePath = getFilesDir().getAbsolutePath() + "/";
-                // start sending file in a thread
-                new Thread(new Runnable() {
-                    @Override
-                    public void run() {
-                        uploadFile(filePath + XML_FILE_1);
-                    }
-                }).start();
-
-            }
-        });
-
-        mSend2.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if (mLastLocation == null) {
-                    mMessage.setText("No location detected. Make sure location is enabled on the device.");
-                } else {
+                if (isNetworkAvailable()) {
                     // create the XML file
                     // previous file, if exists, would be overwritten
-                    Util.createXMLFile(getApplicationContext(), XML_FILE_2, true, mLastLocation);
+                    Util.createXMLFile(getApplicationContext(), XML_FILE_1, false, null);
 
                     // display progress dialog
                     dialog = ProgressDialog.show(MainActivity.this, "Please wait", "Sending file...", true);
@@ -104,9 +84,40 @@ public class MainActivity extends ActionBarActivity implements
                     new Thread(new Runnable() {
                         @Override
                         public void run() {
-                            uploadFile(filePath + XML_FILE_2);
+                            uploadFile(filePath + XML_FILE_1);
                         }
                     }).start();
+
+                } else {
+                    mMessage.setText("Please check your Internet settings");
+                }
+            }
+        });
+
+        mSend2.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (isNetworkAvailable()) {
+                    if (mLastLocation == null) {
+                        mMessage.setText("No location detected. Make sure location is enabled on the device.");
+                    } else {
+                        // create the XML file
+                        // previous file, if exists, would be overwritten
+                        Util.createXMLFile(getApplicationContext(), XML_FILE_2, true, mLastLocation);
+
+                        // display progress dialog
+                        dialog = ProgressDialog.show(MainActivity.this, "Please wait", "Sending file...", true);
+                        final String filePath = getFilesDir().getAbsolutePath() + "/";
+                        // start sending file in a thread
+                        new Thread(new Runnable() {
+                            @Override
+                            public void run() {
+                                uploadFile(filePath + XML_FILE_2);
+                            }
+                        }).start();
+                    }
+                } else {
+                    mMessage.setText("Please check your Internet settings");
                 }
             }
         });
@@ -287,5 +298,12 @@ public class MainActivity extends ActionBarActivity implements
     @Override
     public void onConnectionFailed(ConnectionResult connectionResult) {
         Log.i("MainActivity", "Connection failed: ConnectionResult.getErrorCode() = " + connectionResult.getErrorCode());
+    }
+
+    private boolean isNetworkAvailable() {
+        ConnectivityManager connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo activeNetworkInfo = connectivityManager
+                .getActiveNetworkInfo();
+        return activeNetworkInfo != null && activeNetworkInfo.isConnected();
     }
 }

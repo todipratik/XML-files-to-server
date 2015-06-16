@@ -15,7 +15,12 @@ import android.view.View;
 import android.widget.TextView;
 
 import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.GooglePlayServicesUtil;
 import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.common.api.PendingResult;
+import com.google.android.gms.common.api.Status;
+import com.google.android.gms.location.LocationListener;
+import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
 
 import java.io.DataOutputStream;
@@ -24,9 +29,11 @@ import java.io.FileInputStream;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.text.DateFormat;
+import java.util.Date;
 
 
-public class MainActivity extends ActionBarActivity implements
+public class MainActivity extends ActionBarActivity implements LocationListener,
         GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener {
 
     public static final String INTENT_EDIT = "intent_edit";
@@ -42,6 +49,12 @@ public class MainActivity extends ActionBarActivity implements
     private static final String XML_FILE_1 = "send_1.xml";
     private static final String XML_FILE_2 = "send_2.xml";
 
+    private static final long INTERVAL = 1000 * 10;
+    private static final long FASTEST_INTERVAL = 1000 * 5;
+
+    private LocationRequest mLocationRequest;
+    private String mLastUpdateTime;
+
     private TextView mSend1;
     private TextView mSend2;
     private TextView mMessage;
@@ -54,7 +67,7 @@ public class MainActivity extends ActionBarActivity implements
     /**
      * Represents a geographical location.
      */
-    private Location mLastLocation;
+    private Location mCurrentLocation;
 
     private ProgressDialog dialog = null;
     private Integer serverResponseCode = 0;
@@ -62,12 +75,15 @@ public class MainActivity extends ActionBarActivity implements
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        createLocationRequest();
+        buildGoogleApiClient();
+
         setContentView(R.layout.activity_main);
         mSend1 = (TextView) findViewById(R.id.send_1);
         mSend2 = (TextView) findViewById(R.id.send_2);
         mMessage = (TextView) findViewById(R.id.message);
 
-        buildGoogleApiClient();
 
         mSend1.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -98,12 +114,12 @@ public class MainActivity extends ActionBarActivity implements
             @Override
             public void onClick(View v) {
                 if (isNetworkAvailable()) {
-                    if (mLastLocation == null) {
+                    if (mCurrentLocation == null) {
                         mMessage.setText("No location detected. Make sure location is enabled on the device.");
                     } else {
                         // create the XML file
                         // previous file, if exists, would be overwritten
-                        Util.createXMLFile(getApplicationContext(), XML_FILE_2, true, mLastLocation);
+                        Util.createXMLFile(getApplicationContext(), XML_FILE_2, true, mCurrentLocation);
 
                         // display progress dialog
                         dialog = ProgressDialog.show(MainActivity.this, "Please wait", "Sending file...", true);
@@ -286,7 +302,8 @@ public class MainActivity extends ActionBarActivity implements
     @Override
     public void onConnected(Bundle bundle) {
         Log.i("MainActivity", "Connected to GoogleApiClient");
-        mLastLocation = LocationServices.FusedLocationApi.getLastLocation(mGoogleApiClient);
+        /*  mCurrentLocation = LocationServices.FusedLocationApi.getLastLocation(mGoogleApiClient);  */
+        startLocationUpdates();
     }
 
     @Override
@@ -305,5 +322,71 @@ public class MainActivity extends ActionBarActivity implements
         NetworkInfo activeNetworkInfo = connectivityManager
                 .getActiveNetworkInfo();
         return activeNetworkInfo != null && activeNetworkInfo.isConnected();
+    }
+
+    private boolean isGooglePlayServicesAvailable() {
+        int status = GooglePlayServicesUtil.isGooglePlayServicesAvailable(this);
+        if (ConnectionResult.SUCCESS == status) {
+            return true;
+        } else {
+            GooglePlayServicesUtil.getErrorDialog(status, this, 0).show();
+            return false;
+        }
+    }
+
+    @Override
+    public void onLocationChanged(Location location) {
+        Log.d("MainActivity", "On location changed called.");
+        mCurrentLocation = location;
+        mLastUpdateTime = DateFormat.getTimeInstance().format(new Date());
+    }
+
+    protected void createLocationRequest() {
+        mLocationRequest = new LocationRequest();
+        mLocationRequest.setInterval(INTERVAL);
+        mLocationRequest.setFastestInterval(FASTEST_INTERVAL);
+        mLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        stopLocationUpdates();
+    }
+
+    private void updateUI() {
+        Log.d("MainActivity", "UI update initiated .............");
+        if (null != mCurrentLocation) {
+            String lat = String.valueOf(mCurrentLocation.getLatitude());
+            String lng = String.valueOf(mCurrentLocation.getLongitude());
+            mMessage.setText("At Time: " + mLastUpdateTime + "\n" +
+                    "Latitude: " + lat + "\n" +
+                    "Longitude: " + lng + "\n" +
+                    "Accuracy: " + mCurrentLocation.getAccuracy() + "\n" +
+                    "Provider: " + mCurrentLocation.getProvider());
+        } else {
+            Log.d("MainActivity", "location is null ...............");
+        }
+    }
+
+    protected void stopLocationUpdates() {
+        LocationServices.FusedLocationApi.removeLocationUpdates(
+                mGoogleApiClient, this);
+        Log.d("MainActivity", "Location update stopped");
+    }
+
+    protected void startLocationUpdates() {
+        PendingResult<Status> pendingResult = LocationServices.FusedLocationApi.requestLocationUpdates(
+                mGoogleApiClient, mLocationRequest, this);
+        Log.d("MainActivity", "Location update started");
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (mGoogleApiClient.isConnected()) {
+            startLocationUpdates();
+            Log.d("MainActivity", "Location update resumed");
+        }
     }
 }
